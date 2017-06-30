@@ -210,7 +210,8 @@ Liquid.Block = Liquid.Tag.extend({
     while(tokens.length) {
 
       if( /^\{\%/.test(token) ) { // It's a tag...
-        var tagParts = token.match(/^\{\%\s*(\w+)\s*(.*)?\%\}$/);
+        this.whitespaceHandler(token, tokens);
+        var tagParts = token.match(/^\{\%-?\s*(\w+)\s*(.*?)-?\%\}$/);
 
         if(tagParts) {
           if( this.blockDelimiter == tagParts[1] ) {
@@ -226,6 +227,7 @@ Liquid.Block = Liquid.Tag.extend({
           throw ( "Tag '"+ token +"' was not properly terminated with: %}");
         }
       } else if(/^\{\{/.test(token)) { // It's a variable...
+        this.whitespaceHandler(token, tokens);
         this.nodelist.push( this.createVariable(token) );
       } else { //if(token != '') {
         this.nodelist.push( token );
@@ -247,7 +249,7 @@ Liquid.Block = Liquid.Tag.extend({
   },
 
   createVariable: function(token) {
-    var match = token.match(/^\{\{(.*)\}\}$/);
+    var match = token.match(/^\{\{-?(.*?)-?\}\}$/);
     if(match) { return new Liquid.Variable(match[1]); }
     else { throw ("Variable '"+ token +"' was not properly terminated with: }}"); }
   },
@@ -270,6 +272,20 @@ Liquid.Block = Liquid.Tag.extend({
 
   assertMissingDelimitation: function(){
     throw (this.blockName +" tag was never closed");
+  },
+
+  whitespaceHandler: function (token, tokens) {
+    if (token[2] == '-') {
+      if (this.nodelist.length > 0 && this.nodelist[this.nodelist.length - 1].trim() === '') {
+        this.nodelist.pop();
+      }
+    }
+
+    if (token[token.length - 3] === '-') {
+      if (tokens.length > 0 && tokens[0].trim() === '') {
+        tokens.shift();
+      }
+    }
   }
 });
 Liquid.Document = Liquid.Block.extend({
@@ -1389,8 +1405,15 @@ Liquid.Template.registerFilter({
     return input.split(separator);
   },
 
-  sort: function(input) {
-    return input.sort();
+  sort: function(input, property) {
+    if (field) {
+        return input.slice().sort(function (a, b) {
+          if (typeof(a[property]) == 'undefined' || typeof(b[property]) == 'undefined') return 0;
+          return a[property].toString().localeCompare(b[property].toString());
+        });
+    } else {
+        return input.slice().sort();
+    }
   },
 
   reverse: function(input) {

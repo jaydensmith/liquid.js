@@ -90,8 +90,15 @@ Liquid.Template.registerFilter({
     return input.split(separator);
   },
   
-  sort: function(input) {
-    return input.sort();
+  sort: function(input, property) {
+    if (field) {
+        return input.slice().sort(function (a, b) {
+          if (typeof(a[property]) == 'undefined' || typeof(b[property]) == 'undefined') return 0;
+          return a[property].toString().localeCompare(b[property].toString());
+        });
+    } else {
+        return input.slice().sort();
+    }
   },
   
   reverse: function(input) {
